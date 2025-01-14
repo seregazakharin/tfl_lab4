@@ -276,11 +276,10 @@ def print_grammar(grammar: Dict[str, List[str]], order: List[str]):
             rules = grammar[nt]
             print(f"{nt} → {' | '.join([''.join(rule) for rule in rules])}")
 
-regex = "(ab)(?2)"
-print("Принятое выражение:", regex)
+regex = input("Введите регулярное выражение: ")
 ast = parse(regex.replace(" ", ""))
-print_ast(ast)
 
 if check_correctness(ast):
+    #print_ast(ast)
     cfg, order = build_cfg(ast)
     print_grammar(cfg, order)
