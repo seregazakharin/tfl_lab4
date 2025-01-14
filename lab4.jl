@@ -9,14 +9,14 @@ mutable struct ASTNode
   group_index::Union{Nothing, Int}
 end
 
-  function tokenize(regex::String)
+function tokenize(regex::String)
     tokens = String[]
     i = 1
     while i <= length(regex)
         if regex[i] in ['(', ')', '|', '*', '?', ':', '=']
             push!(tokens, string(regex[i]))
             i += 1
-        elseif isletter(regex[i]) || isdigit(regex[i])
+        elseif regex[i] >= 'a' && regex[i] <= 'z' || isdigit(regex[i])
             push!(tokens, string(regex[i]))
             i += 1
         else
@@ -25,7 +25,7 @@ end
     end
     push!(tokens, "+")  # Добавляем конец строки
     return tokens
-  end
+end
 
   function parce_regex(regex::String)
     tokens = tokenize(regex)
