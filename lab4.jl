@@ -92,6 +92,9 @@ end
                     return ASTNode("NoCapture", nothing, node, nothing, nothing)
                 elseif current_token() == "="
                     consume("=")
+                    if isdigit(current_token()[1])
+                        throw(ArgumentError("Недопустимый токен: " * current_token()))
+                    end
                     node = parce_regex_alternative()
                     consume(")")
                     return ASTNode("LookAhead", nothing, node, nothing, nothing)
