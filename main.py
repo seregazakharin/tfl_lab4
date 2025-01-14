@@ -105,7 +105,6 @@ def parse(regex: str) -> ASTNode:
 
 # Функция для печати AST
 def print_ast(node: ASTNode, indent: str = "", is_last: bool = False, is_root: bool = True):
-    """Рекурсивно печатает AST с ветками, убирая первую ветку."""
     branch = "" if is_root else ("└── " if is_last else "├── ")
     next_indent = "" if is_root else ("    " if is_last else "│   ")
 
@@ -193,7 +192,9 @@ def check_correctness(ast: ASTNode) -> bool:
         return False
 
 def collect_groups(node: ASTNode) -> Set[int]:
-    # Рекурсивно собирает индексы всех групп захвата в AST.
+    """
+    Рекурсивно собирает индексы всех групп захвата в AST.
+    """
     groups = set()
     if node['type'] == 'Capture':
         groups.add(node['index'])
@@ -205,18 +206,18 @@ def collect_groups(node: ASTNode) -> Set[int]:
         groups.update(collect_groups(node['right']))
     return groups
 
-# Тип для узлов AST
-ASTNode = Dict[str, Union[str, int, 'ASTNode']]
-
-def build_cfg(ast: ASTNode) -> Dict[str, List[str]]:
+def build_cfg(ast: ASTNode) -> (Dict[str, List[str]], List[str]):
     grammar = {}
     non_terminal_counter = [0]
     group_inner_nt = {}  # mapping from group_index to inner non-terminal
     unresolved_links = []  # список нерешенных ссылок (для отложенной обработки)
+    non_terminal_order = []  # порядок нетерминалов
 
     def get_non_terminal() -> str:
         non_terminal_counter[0] += 1
-        return f"N{non_terminal_counter[0]}"
+        nt = f"N{non_terminal_counter[0]}"
+        non_terminal_order.append(nt)
+        return nt
 
     def build(node: ASTNode) -> str:
         nt = get_non_terminal()
@@ -251,8 +252,10 @@ def build_cfg(ast: ASTNode) -> Dict[str, List[str]]:
                 # Добавляем нерешенную ссылку
                 unresolved_links.append((nt, group_index))
         elif node['type'] == 'LookAhead':
-            child_nt = build(node['node'])
-            grammar[nt] = [child_nt]
+            grammar[nt] = ["epsilon"]  # LookAhead всегда переводится в epsilon
+                    # lookahead_nt = get_non_terminal()
+                    # grammar[lookahead_nt] = ["epsilon"]  # LookAhead всегда ведет к эпсилон
+                    # grammar[nt] = [lookahead_nt]  # Текущий нетерминал ссылается на L
         else:
             raise ValueError(f"Unknown node type: {node['type']}")
         return nt
@@ -265,14 +268,19 @@ def build_cfg(ast: ASTNode) -> Dict[str, List[str]]:
         else:
             raise ValueError(f"Unresolved group link: {group_index}")
 
-    return grammar
+    return grammar, non_terminal_order
 
-regex = "(?=a)"
+def print_grammar(grammar: Dict[str, List[str]], order: List[str]):
+    for nt in order:
+        if nt in grammar:
+            rules = grammar[nt]
+            print(f"{nt} → {' | '.join([''.join(rule) for rule in rules])}")
+
+regex = "(ab)(?2)"
+print("Принятое выражение:", regex)
 ast = parse(regex.replace(" ", ""))
 print_ast(ast)
 
 if check_correctness(ast):
-    cfg = build_cfg(ast)
-
-    for nt, rules in cfg.items():
-        print(f"{nt} → {' | '.join([''.join(rule) for rule in rules])}")
+    cfg, order = build_cfg(ast)
+    print_grammar(cfg, order)
